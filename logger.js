@@ -3,22 +3,46 @@
 const winston = require("winston");
 const { getEnv } = require("./utils");
 const { LoggingWinston } = require("@google-cloud/logging-winston");
+const colors = require("./colors");
 
 const { format } = winston;
+const env = getEnv();
 
 /**
  * Gcloud Node app tracing
  */
-if (getEnv() === "GcloudKube") {
+if (env === "GcloudKube") {
   require("@google-cloud/trace-agent").start();
 }
+
+const myFormat = format.printf(info => {
+  let str = `${colors.FgBlue}${info.timestamp} ${info.label} ${info.level}: ${
+    info.message
+  }`;
+  if (info.timeUsage != null) {
+    str += ` ${colors.FgYellow}${info.timeUsage} ms`;
+  }
+  if (info.stack != null) {
+    str += `stack:
+    ${colors.FgRed}${info.stack}`;
+  }
+  return str;
+});
 
 /**
  * Config transports for diffrent env
  */
 const transportsConfig = {
   development: () => [
-    new winston.transports.Console({ timestamp: true }),
+    new winston.transports.Console({
+      format: format.combine(
+        format.colorize(),
+        format.label({ label: `[${env}]` }),
+        format.timestamp(),
+        format.splat(),
+        myFormat
+      )
+    }),
     new winston.transports.File({ filename: "combined.log" }),
     new winston.transports.File({ filename: "error.log", level: "error" })
   ],
@@ -26,14 +50,9 @@ const transportsConfig = {
 };
 transportsConfig["GcloudKube"] = transportsConfig.production;
 
-const env = getEnv();
 const logger = winston.createLogger({
   level: "info", //  Log only if info.level less than or equal to this level
-  format: format.combine(
-    format.errors({ stack: true }),
-    format.timestamp(),
-    format.json()
-  ),
+  format: format.combine(format.errors({ stack: true }), format.timestamp()),
   defaultMeta: { env },
   transports: transportsConfig[env]()
 });
@@ -44,10 +63,21 @@ const logger = winston.createLogger({
  */
 function reqParser(req) {
   return {
-    status: req.statusCode,
     requestUrl: req.url,
     requestMethod: req.method,
-    remoteIp: req.connection.remoteAddress
+    remoteIp: req.connection.remoteAddress,
+    payload: req.body,
+    user: req && req.user && req.user.email
+  };
+}
+
+/**
+ *
+ * @param {Object} res
+ */
+function resParser(res) {
+  return {
+    status: res.statusCode
   };
 }
 
@@ -55,7 +85,30 @@ function reqParser(req) {
  * request log handler
  */
 logger.expressRequestHandler = function(req, res, next) {
-  logger.info(`${req.method} ${req.url}`, { httpRequest: reqParser(req) });
+  const start = Date.now();
+
+  // normal finish request
+  res.once("finish", () => {
+    const timeUsage = Date.now() - start;
+    logger.info(`${req.method} ${req.url}`, {
+      httpRequest: reqParser(req),
+      httpResponse: resParser(res),
+      timeUsage,
+      status: "finish"
+    });
+  });
+
+  // terminated request
+  res.once("close", () => {
+    const timeUsage = Date.now() - start;
+    logger.info(`${req.method} ${req.url}`, {
+      httpRequest: reqParser(req),
+      httpResponse: resParser(res),
+      timeUsage: timeUsage,
+      status: "close"
+    });
+  });
+
   next();
 };
 

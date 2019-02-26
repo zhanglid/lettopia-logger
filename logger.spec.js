@@ -41,19 +41,24 @@ describe("logger test", () => {
       expect(spyOnLog.lastCall.args[0]).to.have.property("timestamp");
     });
 
-    it("should record http request", () => {
-      const req = {
-        statusCode: 222,
-        url: "fake url",
-        method: "GET",
-        connection: {
-          remoteAddress: "111.111.111.111"
-        }
-      };
+    it("should record http request", (done) => {
+      const app = express();
       const next = sinon.fake();
-      logger.expressRequestHandler(req, null, next);
-
-      expect(spyOnLog.lastCall.args[0]).to.have.property("httpRequest");
+      app.use(logger.expressRequestHandler);
+      app.get(
+        "/test",
+        function(req, res, next) {
+          res.send("test res");
+        },
+        next
+      );
+      request(app)
+        .get("/test")
+        .expect(200)
+        .end(() => {
+          expect(spyOnLog.lastCall.args[0]).to.have.property("httpRequest");
+          done();
+        });
     });
 
     it("should log error", () => {
