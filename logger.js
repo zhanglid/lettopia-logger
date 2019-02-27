@@ -11,7 +11,7 @@ const env = getEnv();
 /**
  * Gcloud Node app tracing
  */
-if (env === "GcloudKube") {
+if (["GcloudKube", "GcloudKubeTest"].includes(env)) {
   require("@google-cloud/trace-agent").start();
 }
 
