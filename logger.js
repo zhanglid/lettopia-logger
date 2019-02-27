@@ -67,7 +67,18 @@ const transportsConfig = {
       format: format.json()
     })
   ],
-  production: () => [new winston.transports.Console(), new LoggingWinston()]
+  production: () => [
+    new winston.transports.Console({
+      format: format.combine(
+        format.no(),
+        format.label({ label: `${env}` }),
+        format.timestamp(),
+        format.splat(),
+        myFormat
+      )
+    }),
+    new LoggingWinston()
+  ]
 };
 transportsConfig["GcloudKube"] = transportsConfig.production;
 transportsConfig["GcloudKubeTest"] = transportsConfig.production;
