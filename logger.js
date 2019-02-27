@@ -70,6 +70,7 @@ const transportsConfig = {
   production: () => [new winston.transports.Console(), new LoggingWinston()]
 };
 transportsConfig["GcloudKube"] = transportsConfig.production;
+transportsConfig["GcloudKubeTest"] = transportsConfig.production;
 
 const logger = winston.createLogger({
   level: "info", //  Log only if info.level less than or equal to this level
