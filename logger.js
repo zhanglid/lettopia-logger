@@ -76,7 +76,9 @@ const transportsConfig = {
         myFormat
       )
     }),
-    new LoggingWinston()
+    new LoggingWinston({
+      format: format.json()
+    })
   ]
 };
 transportsConfig["GcloudKube"] = transportsConfig.production;
