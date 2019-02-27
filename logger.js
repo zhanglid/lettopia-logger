@@ -70,7 +70,6 @@ const transportsConfig = {
   production: () => [
     new winston.transports.Console({
       format: format.combine(
-        format.no(),
         format.label({ label: `${env}` }),
         format.timestamp(),
         format.splat(),
