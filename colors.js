@@ -1,4 +1,4 @@
-module.exports = {
+const COLORS = {
   Reset: "\x1b[0m",
   Bright: "\x1b[1m",
   Dim: "\x1b[2m",
@@ -25,3 +25,7 @@ module.exports = {
   BgCyan: "\x1b[46m",
   BgWhite: "\x1b[47m"
 };
+module.exports = Object.keys(COLORS).reduce((result, key) => {
+  result[key] = str => `${COLORS[key]}${str}]`;
+  return result;
+}, {});

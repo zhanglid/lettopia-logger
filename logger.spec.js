@@ -6,7 +6,7 @@ chai.use(sinonChai);
 const proxyquire = require("proxyquire");
 const express = require("express");
 const request = require("supertest");
-const bodyParser = require('body-parser')
+const bodyParser = require("body-parser");
 
 describe("logger test", () => {
   describe("development", () => {
@@ -56,13 +56,68 @@ describe("logger test", () => {
       );
       request(app)
         .post("/test")
+        .expect(200)
+        .end(() => {
+          expect(spyOnLog.lastCall.args[0]).to.have.property("httpRequest");
+          done();
+        });
+    });
+
+    it("should record graphql request", done => {
+      const app = express();
+      const next = sinon.fake();
+      app.use(bodyParser.json());
+      app.use(logger.expressRequestHandler);
+      app.post(
+        "/test",
+        function(req, res, next) {
+          res.send("test res");
+        },
+        next
+      );
+      request(app)
+        .post("/test")
         .send({
-          operation: "go",
-          query: "get the money back"
+          query: "{\n userMe {\n email\n _id\n balance {\n balance\n }\n }\n}\n"
         })
         .expect(200)
         .end(() => {
           expect(spyOnLog.lastCall.args[0]).to.have.property("httpRequest");
+          expect(spyOnLog.lastCall.args[0].httpRequest).to.have.property(
+            "gqlQuery"
+          );
+          done();
+        });
+    });
+
+    it("should record user", done => {
+      const app = express();
+      const next = sinon.fake();
+      app.use(bodyParser.json());
+      app.use((req, res, next) => {
+        req.user = {
+          email: "test@gmai.com"
+        };
+        next();
+      });
+      app.use(logger.expressRequestHandler);
+      app.post(
+        "/test",
+        function(req, res, next) {
+          res.send("test res");
+        },
+        next
+      );
+      request(app)
+        .post("/test")
+        .send({
+          query: "{\n userMe {\n email\n _id\n balance {\n balance\n }\n }\n}\n"
+        })
+        .expect(200)
+        .end(() => {
+          expect(spyOnLog.lastCall.args[0].httpRequest).to.have.property(
+            "user"
+          );
           done();
         });
     });

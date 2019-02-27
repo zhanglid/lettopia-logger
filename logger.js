@@ -3,7 +3,7 @@
 const winston = require("winston");
 const { getEnv } = require("./utils");
 const { LoggingWinston } = require("@google-cloud/logging-winston");
-const colors = require("./colors");
+const chalk = require("chalk");
 
 const { format } = winston;
 const env = getEnv();
@@ -15,16 +15,30 @@ if (env === "GcloudKube") {
   require("@google-cloud/trace-agent").start();
 }
 
+function formatRequestGQL(req) {
+  return (req && req.gqlQuery && req.gqlQuery.replace(/\n/g, "")) || null;
+}
+
 const myFormat = format.printf(info => {
-  let str = `${colors.FgBlue}${info.timestamp} ${info.label} ${info.level}: ${
-    info.message
-  }`;
+  let str = `[${chalk.grey(info.label)}.${info.level}] ${chalk.grey(
+    info.timestamp
+  )} ${info.message}`;
+
+  if (info.httpRequest && info.httpRequest.user) {
+    str += " " + chalk.blue(info.httpRequest.user);
+  }
+
+  const gqlStr = formatRequestGQL(info.httpRequest);
+  if (gqlStr) {
+    str += " " + chalk.gray(gqlStr);
+  }
+
   if (info.timeUsage != null) {
-    str += ` ${colors.FgYellow}${info.timeUsage} ms`;
+    str += ` ${chalk.yellow(`${info.timeUsage} ms`)}`;
   }
   if (info.stack != null) {
     str += `stack:
-    ${colors.FgRed}${info.stack}`;
+    ${chalk.red(info.stack)}`;
   }
   return str;
 });
@@ -37,7 +51,7 @@ const transportsConfig = {
     new winston.transports.Console({
       format: format.combine(
         format.colorize(),
-        format.label({ label: `[${env}]` }),
+        format.label({ label: `${env}` }),
         format.timestamp(),
         format.splat(),
         myFormat
@@ -74,7 +88,8 @@ function reqParser(req) {
     requestMethod: req.method,
     remoteIp: req.connection.remoteAddress,
     payload: req.body,
-    user: req && req.user && req.user.email
+    user: req && req.user && req.user.email,
+    gqlQuery: req && req.body && req.body.query && req.body.query
   };
 }
 
@@ -98,17 +113,12 @@ logger.expressRequestHandler = function(req, res, next) {
   res.once("finish", () => {
     const httpRequest = reqParser(req);
     const timeUsage = Date.now() - start;
-    logger.info(
-      `${colors.FgGreen}${httpRequest.requestMethod} ${
-        httpRequest.requestUrl
-      } ${httpRequest.remoteIp} ${httpRequest.user || ""}`,
-      {
-        httpRequest,
-        httpResponse: resParser(res),
-        timeUsage,
-        status: "finish"
-      }
-    );
+    logger.info(`${req.method} ${req.url}`, {
+      httpRequest,
+      httpResponse: resParser(res),
+      timeUsage,
+      status: "finish"
+    });
   });
 
   // terminated request
