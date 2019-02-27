@@ -20,24 +20,24 @@ function formatRequestGQL(req) {
 }
 
 const myFormat = format.printf(info => {
-  let str = `[${chalk.grey(info.label)}.${info.level}] ${chalk.grey(
+  let str = `[${chalk.green(info.label)}.${info.level}] ${chalk.cyan(
     info.timestamp
-  )} ${info.message}`;
+  )} ${chalk.magentaBright(info.message)}`;
 
   if (info.httpRequest && info.httpRequest.user) {
-    str += " " + chalk.blue(info.httpRequest.user);
+    str += " " + chalk.cyan(info.httpRequest.user);
   }
 
   const gqlStr = formatRequestGQL(info.httpRequest);
   if (gqlStr) {
-    str += " " + chalk.gray(gqlStr);
+    str += " " + gqlStr;
   }
 
   if (info.timeUsage != null) {
     str += ` ${chalk.yellow(`${info.timeUsage} ms`)}`;
   }
   if (info.stack != null) {
-    str += `stack:
+    str += `
     ${chalk.red(info.stack)}`;
   }
   return str;
