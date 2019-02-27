@@ -6,6 +6,7 @@ chai.use(sinonChai);
 const proxyquire = require("proxyquire");
 const express = require("express");
 const request = require("supertest");
+const bodyParser = require('body-parser')
 
 describe("logger test", () => {
   describe("development", () => {
@@ -41,11 +42,12 @@ describe("logger test", () => {
       expect(spyOnLog.lastCall.args[0]).to.have.property("timestamp");
     });
 
-    it("should record http request", (done) => {
+    it("should record http request", done => {
       const app = express();
       const next = sinon.fake();
+      app.use(bodyParser.json());
       app.use(logger.expressRequestHandler);
-      app.get(
+      app.post(
         "/test",
         function(req, res, next) {
           res.send("test res");
@@ -53,7 +55,11 @@ describe("logger test", () => {
         next
       );
       request(app)
-        .get("/test")
+        .post("/test")
+        .send({
+          operation: "go",
+          query: "get the money back"
+        })
         .expect(200)
         .end(() => {
           expect(spyOnLog.lastCall.args[0]).to.have.property("httpRequest");

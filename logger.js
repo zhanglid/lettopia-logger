@@ -43,8 +43,15 @@ const transportsConfig = {
         myFormat
       )
     }),
-    new winston.transports.File({ filename: "combined.log" }),
-    new winston.transports.File({ filename: "error.log", level: "error" })
+    new winston.transports.File({
+      filename: "combined.log",
+      format: format.json()
+    }),
+    new winston.transports.File({
+      filename: "error.log",
+      level: "error",
+      format: format.json()
+    })
   ],
   production: () => [new winston.transports.Console(), new LoggingWinston()]
 };
@@ -89,13 +96,19 @@ logger.expressRequestHandler = function(req, res, next) {
 
   // normal finish request
   res.once("finish", () => {
+    const httpRequest = reqParser(req);
     const timeUsage = Date.now() - start;
-    logger.info(`${req.method} ${req.url}`, {
-      httpRequest: reqParser(req),
-      httpResponse: resParser(res),
-      timeUsage,
-      status: "finish"
-    });
+    logger.info(
+      `${colors.FgGreen}${httpRequest.requestMethod} ${
+        httpRequest.requestUrl
+      } ${httpRequest.remoteIp} ${httpRequest.user || ""}`,
+      {
+        httpRequest,
+        httpResponse: resParser(res),
+        timeUsage,
+        status: "finish"
+      }
+    );
   });
 
   // terminated request
