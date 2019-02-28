@@ -4,6 +4,7 @@ const winston = require("winston");
 const { getEnv } = require("./utils");
 const { LoggingWinston } = require("@google-cloud/logging-winston");
 const chalk = require("chalk");
+const _ = require('lodash');
 
 const { format } = winston;
 const env = getEnv();
@@ -20,12 +21,16 @@ function formatRequestGQL(req) {
 }
 
 const myFormat = format.printf(info => {
-  let str = `[${chalk.green(info.label)}.${info.level}] ${chalk.cyan(
+  let str = `[${chalk.green(info.label)}.${info.level}] ${chalk.grey(
     info.timestamp
   )} ${chalk.magentaBright(info.message)}`;
 
   if (info.httpRequest && info.httpRequest.user) {
     str += " " + chalk.cyan(info.httpRequest.user);
+  }
+
+  if (info.httpRequest && info.httpRequest.referer) {
+    str += " " + chalk.cyan(info.httpRequest.referer);
   }
 
   const gqlStr = formatRequestGQL(info.httpRequest);
@@ -77,7 +82,11 @@ const transportsConfig = {
       )
     }),
     new LoggingWinston({
-      format: format.json()
+      format: format.json(),
+      serviceContext: {
+        service: 'selling-server', 
+        version: env
+      }
     })
   ]
 };
@@ -97,9 +106,11 @@ const logger = winston.createLogger({
  */
 function reqParser(req) {
   return {
-    requestUrl: req.url,
+    requestUrl: req.originalUrl,
     requestMethod: req.method,
-    remoteIp: req.connection.remoteAddress,
+    remoteIp: _.get(req, "headers.x-forwarded-for") || req.connection.remoteAddress,
+    userAgent: _.get(req, "headers.user-agent"),
+    referer: _.get(req, "headers.referer"),
     payload: req.body,
     user: req && req.user && req.user.email,
     gqlQuery: req && req.body && req.body.query && req.body.query

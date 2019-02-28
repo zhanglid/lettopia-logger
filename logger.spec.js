@@ -54,8 +54,26 @@ describe("logger test", () => {
         },
         next
       );
+      const headers = {
+        accept: "application/json, text/plain, */*",
+        "accept-encoding": "gzip, deflate, br",
+        "accept-language": "zh-CN,zh;q=0.9",
+        connection: "Keep-Alive",
+        host: "gcloud-api.lettopia.com",
+        "if-none-match": "W/'1cf-FP3HO2DuRrrpDQrETqIvFic2NNY'",
+        origin: "https://admin.lettopia.com",
+        referer: "https://admin.lettopia.com/order",
+        "user-agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3626.119 Safari/537.36",
+        via: "1.1 google",
+        "x-cloud-trace-context":
+          "535f61abd8e53e03613b388b0e6d9fa2/11817843603185438380",
+        "x-forwarded-for": "47.156.137.59, 35.244.219.128",
+        "x-forwarded-proto": "https"
+      };
       request(app)
         .post("/test")
+        .set(headers)
         .expect(200)
         .end(() => {
           expect(spyOnLog.lastCall.args[0]).to.have.property("httpRequest");
