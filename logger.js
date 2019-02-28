@@ -25,12 +25,16 @@ const myFormat = format.printf(info => {
     info.timestamp
   )} ${chalk.magentaBright(info.message)}`;
 
-  if (info.httpRequest && info.httpRequest.user) {
-    str += " " + chalk.cyan(info.httpRequest.user);
-  }
-
-  if (info.httpRequest && info.httpRequest.referer) {
-    str += " " + chalk.cyan(info.httpRequest.referer);
+  if (info.httpRequest) {
+    if (info.httpRequest.user) {
+      str += " " + chalk.cyan(info.httpRequest.user);
+    }
+    if (info.httpRequest.referer) {
+      str += " " + chalk.cyan(info.httpRequest.referer);
+    }
+    if (info.httpRequest.remoteIp) {
+      str += " " + chalk.cyan(info.httpRequest.remoteIp);
+    }
   }
 
   const gqlStr = formatRequestGQL(info.httpRequest);
@@ -153,13 +157,16 @@ logger.expressRequestHandler = function(req, res, next) {
   // terminated request
   res.once("close", () => {
     const timeUsage = Date.now() - start;
-    logger.info(`${httpRequest.requestMethod} ${httpRequest.requestUrl} closed`, {
-      httpRequest: reqParser(req),
-      httpResponse: resParser(res),
-      timeUsage: timeUsage,
-      status: "close",
-      gqlQuery: httpRequest.gqlQuery
-    });
+    logger.info(
+      `${httpRequest.requestMethod} ${httpRequest.requestUrl} closed`,
+      {
+        httpRequest: reqParser(req),
+        httpResponse: resParser(res),
+        timeUsage: timeUsage,
+        status: "close",
+        gqlQuery: httpRequest.gqlQuery
+      }
+    );
   });
 
   next();
