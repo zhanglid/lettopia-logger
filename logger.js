@@ -4,7 +4,7 @@ const winston = require("winston");
 const { getEnv } = require("./utils");
 const { LoggingWinston } = require("@google-cloud/logging-winston");
 const chalk = require("chalk");
-const _ = require('lodash');
+const _ = require("lodash");
 
 const { format } = winston;
 const env = getEnv();
@@ -51,6 +51,15 @@ const myFormat = format.printf(info => {
 /**
  * Config transports for diffrent env
  */
+
+const loggingWinston = new LoggingWinston({
+  serviceContext: {
+    service: "selling-server",
+    version: env
+  }
+});
+loggingWinston.format = format.json();
+
 const transportsConfig = {
   development: () => [
     new winston.transports.Console({
@@ -81,13 +90,7 @@ const transportsConfig = {
         myFormat
       )
     }),
-    new LoggingWinston({
-      format: format.json(),
-      serviceContext: {
-        service: 'selling-server', 
-        version: env
-      }
-    })
+    loggingWinston
   ]
 };
 transportsConfig["GcloudKube"] = transportsConfig.production;
@@ -108,7 +111,8 @@ function reqParser(req) {
   return {
     requestUrl: req.originalUrl,
     requestMethod: req.method,
-    remoteIp: _.get(req, "headers.x-forwarded-for") || req.connection.remoteAddress,
+    remoteIp:
+      _.get(req, "headers.x-forwarded-for") || req.connection.remoteAddress,
     userAgent: _.get(req, "headers.user-agent"),
     referer: _.get(req, "headers.referer"),
     payload: req.body,
