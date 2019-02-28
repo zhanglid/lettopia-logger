@@ -141,22 +141,24 @@ logger.expressRequestHandler = function(req, res, next) {
   res.once("finish", () => {
     const httpRequest = reqParser(req);
     const timeUsage = Date.now() - start;
-    logger.info(`${req.method} ${req.url}`, {
+    logger.info(`${httpRequest.requestMethod} ${httpRequest.requestUrl}`, {
       httpRequest,
       httpResponse: resParser(res),
       timeUsage,
-      status: "finish"
+      status: "finish",
+      gqlQuery: httpRequest.gqlQuery
     });
   });
 
   // terminated request
   res.once("close", () => {
     const timeUsage = Date.now() - start;
-    logger.info(`${req.method} ${req.url}`, {
+    logger.info(`${httpRequest.requestMethod} ${httpRequest.requestUrl} closed`, {
       httpRequest: reqParser(req),
       httpResponse: resParser(res),
       timeUsage: timeUsage,
-      status: "close"
+      status: "close",
+      gqlQuery: httpRequest.gqlQuery
     });
   });
 
